@@ -1,3 +1,4 @@
+import re
 import time
 import socket
 import threading
@@ -13,7 +14,7 @@ def handle_client(client_socket):
             # print(client_socket.getpeername())
             if message:
                 json_data = json.loads(message)
-                print(f"{addresses[client_socket]} 傳送給 {json_data['target']}")
+                print(f"{addresses[client_socket]} send to {json_data['target']}")
                 target = json_data.get("target")
                 if target and target in clients:
                     send_json_to_client(clients[target], json_data)
@@ -34,22 +35,38 @@ def handle_client(client_socket):
             remove(client_socket)
             break
         except json.decoder.JSONDecodeError as e:
-            print(f"Error: {e}")
+            # print(f"Error: {e}")
+            # print(message)
+            # print(type(message))
+            # threading.Thread(target=split_str, args=(client_socket, message,)).start()
+            split_str(client_socket, message)
             # for client in addresses:
             #     if client_socket == client:
-            data = {
-                'error': f'resend_{json_data["data"]}'
-            }
             
-            if 'timestamp' in json_data:
-                data['timestamp'] = json_data['timestamp']
-                send_json_to_client(client_socket, data)
-                if json_data['data'] == "image":
-                    data['reset'] = "image"
-                    send_json_to_client(clients[json_data['target']], data)
-            print(data)
-            print(len(json_data))
+            # data = {
+            #     'error': f'resend_{json_data["data"]}'
+            # }
+            
+            # if 'timestamp' in json_data:
+            #     data['timestamp'] = json_data['timestamp']
+            #     send_json_to_client(client_socket, data)
+            #     if json_data['data'] == "image":
+            #         data['reset'] = "image"
+            #         send_json_to_client(clients[json_data['target']], data)
+            # print(data)
+            # print(len(json_data))
                     
+def split_str(client_socket, data):
+    pattern = re.compile(r'\{[^{}]*\}')
+    matches = pattern.findall(data)
+    print("分割")
+    # 將每個匹配的字串轉換為字典
+    dicts = [eval(match) for match in matches]
+    for json_data in dicts:
+        print(f"{addresses[client_socket]} send to {json_data['target']}")
+        target = json_data.get("target")
+        if target and target in clients:
+            send_json_to_client(clients[target], json_data)      
             
 def save_json(json_data):
     with open('received_data.json', 'w', encoding='utf-8') as file:
@@ -119,7 +136,7 @@ def send_json_to_target(target_name, json_data):
 
 if __name__ == "__main__":
     host = "192.168.178.151"
-    port = 12345
+    port = 1234
     server_thread = threading.Thread(target=server_program, args=(host, port))
     server_thread.start()
 
